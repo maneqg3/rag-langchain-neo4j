@@ -32,7 +32,7 @@ export function loadConfig(): AppConfig {
     neo4jIndexName: process.env.NEO4J_INDEX_NAME || "vector_index",
     neo4jNodeLabel: process.env.NEO4J_NODE_LABEL || "Chunk",
     openRouterApiKey: process.env.OPENROUTER_API_KEY || undefined,
-    openRouterModel: process.env.OPENROUTER_MODEL || "meta-llama/llama-3.2-3b-instruct:free",
+    openRouterModel: process.env.OPENROUTER_MODEL || "openai/gpt-oss-20b:free",
     openRouterBaseUrl: process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1",
     embeddingModel: process.env.EMBEDDING_MODEL || "Xenova/all-MiniLM-L6-v2",
     dataPath: process.env.DATA_PATH || "./data/source.pdf",

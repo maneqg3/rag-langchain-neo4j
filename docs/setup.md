@@ -29,7 +29,7 @@ definidos em `NEO4J_USERNAME`/`NEO4J_PASSWORD`.
 | `NEO4J_INDEX_NAME` | não | `vector_index` | nome do índice vetorial |
 | `NEO4J_NODE_LABEL` | não | `Chunk` | label dos nós que guardam os chunks |
 | `OPENROUTER_API_KEY` | não* | — | sem ela, indexação roda mas LLM não é chamado |
-| `OPENROUTER_MODEL` | não | `meta-llama/llama-3.2-3b-instruct:free` | slug do modelo no OpenRouter |
+| `OPENROUTER_MODEL` | não | `openai/gpt-oss-20b:free` | slug do modelo no OpenRouter |
 | `OPENROUTER_BASE_URL` | não | `https://openrouter.ai/api/v1` | endpoint compatível com OpenAI |
 | `EMBEDDING_MODEL` | não | `Xenova/all-MiniLM-L6-v2` | modelo de embeddings local |
 | `DATA_PATH` | não | `./data/source.pdf` | caminho do PDF a indexar |

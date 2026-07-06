@@ -79,10 +79,20 @@ encerra antes de chamar o LLM.
 - Na primeira indexação (`preDeleteCollection: true` sem índice existente ainda), o
   driver do Neo4j loga `"Unable to drop index... There is no such index"` — é
   informativo, não interrompe o pipeline.
-- Testado de ponta a ponta com o PDF placeholder gerado (`npm run generate:placeholder-pdf`):
-  indexação e busca vetorial funcionam com Neo4j real; a geração de resposta via LLM
-  ainda depende de `OPENROUTER_API_KEY` e de um documento real para produzir respostas
-  com conteúdo substantivo nas 5 perguntas de teste.
+- Testado de ponta a ponta com Neo4j real e um PDF real (receita de bolo): indexação,
+  busca vetorial e geração de resposta via LLM funcionam. Perguntas sobre RAG corretamente
+  retornam "não há informação no contexto" — o documento é sobre culinária, não sobre RAG,
+  e o pipeline não inventa uma resposta só porque tem um LLM disponível.
+- Bug real encontrado: o processo nunca fechava a conexão do Neo4j
+  (`Neo4jVectorStore.close()`), então `npm run dev` ficava pendurado mesmo após terminar
+  ou falhar. Rodar várias vezes sem perceber isso empilha processos concorrentes batendo
+  na mesma API ao mesmo tempo — o que pareceu, por um tempo, um rate-limit implacável do
+  modelo gratuito. A causa real era os processos zumbis, não o modelo. Corrigido com
+  `try/finally` em `src/index.ts`.
+- Modelos gratuitos do OpenRouter têm disponibilidade instável por provider (ex:
+  `meta-llama/llama-3.2-3b-instruct:free` via provider "Venice" ficou rate-limited por
+  vários minutos seguidos). O default do projeto é `openai/gpt-oss-20b:free`, mas vale
+  conferir a lista atual em https://openrouter.ai/models?q=free se a resposta não vier.
 
 ## Próximos passos / melhorias planejadas
 
