@@ -29,42 +29,47 @@ async function main(): Promise<void> {
   console.log("📚 Indexando documento...");
   const vectorStore = await ingestDocument(embeddings, config);
 
-  if (!config.openRouterApiKey) {
-    console.warn(
-      "⚠️  OPENROUTER_API_KEY não configurada — indexação concluída, mas as perguntas não serão respondidas pelo LLM ainda.",
-    );
-    return;
+  try {
+    if (!config.openRouterApiKey) {
+      console.warn(
+        "⚠️  OPENROUTER_API_KEY não configurada — indexação concluída, mas as perguntas não serão respondidas pelo LLM ainda.",
+      );
+      return;
+    }
+
+    const llm = new ChatOpenAI({
+      apiKey: config.openRouterApiKey,
+      model: config.openRouterModel,
+      temperature: 0.2,
+      maxRetries: 2,
+      configuration: { baseURL: config.openRouterBaseUrl },
+    });
+
+    const ai = new AI({
+      vectorStore,
+      llm,
+      promptConfig: loadPromptConfig(),
+      responseTemplate: loadResponseTemplate(),
+      topK: config.topK,
+      scoreThreshold: config.scoreThreshold,
+    });
+
+    mkdirSync(config.outputsDir, { recursive: true });
+
+    for (const [index, question] of TEST_QUESTIONS.entries()) {
+      console.log(`❓ ${question}`);
+      const { answer, sources } = await ai.answerQuestion(question);
+      console.log(`✅ ${answer}`);
+
+      const markdown = formatAnswerMarkdown(question, answer, sources);
+      writeFileSync(join(config.outputsDir, `resposta-${index + 1}.md`), markdown, "utf-8");
+    }
+
+    console.log(`✨ Concluído. Respostas salvas em ${config.outputsDir}/`);
+  } finally {
+    // ponytail: sem isso o driver do Neo4j mantém a conexão aberta e o processo nunca termina.
+    await vectorStore.close();
   }
-
-  const llm = new ChatOpenAI({
-    apiKey: config.openRouterApiKey,
-    model: config.openRouterModel,
-    temperature: 0.2,
-    maxRetries: 2,
-    configuration: { baseURL: config.openRouterBaseUrl },
-  });
-
-  const ai = new AI({
-    vectorStore,
-    llm,
-    promptConfig: loadPromptConfig(),
-    responseTemplate: loadResponseTemplate(),
-    topK: config.topK,
-    scoreThreshold: config.scoreThreshold,
-  });
-
-  mkdirSync(config.outputsDir, { recursive: true });
-
-  for (const [index, question] of TEST_QUESTIONS.entries()) {
-    console.log(`❓ ${question}`);
-    const { answer, sources } = await ai.answerQuestion(question);
-    console.log(`✅ ${answer}`);
-
-    const markdown = formatAnswerMarkdown(question, answer, sources);
-    writeFileSync(join(config.outputsDir, `resposta-${index + 1}.md`), markdown, "utf-8");
-  }
-
-  console.log(`✨ Concluído. Respostas salvas em ${config.outputsDir}/`);
 }
 
 main().catch((error) => {
