@@ -1,0 +1,8 @@
+Contexto recuperado:
+{{context}}
+
+Instruções:
+{{instructions}}
+
+Pergunta do usuário:
+{{question}}
