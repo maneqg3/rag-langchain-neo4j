@@ -66,6 +66,19 @@ encerra antes de chamar o LLM.
 - **Ajustar o prompt**: edite `src/prompts/answer-prompt.json` e `src/prompts/response-template.txt`.
 - **Ajustar chunking e top-K**: `chunkSize`/`chunkOverlap` em `src/ingest.ts`; `TOP_K` e `SCORE_THRESHOLD` no `.env`.
 
+## Avaliação automática
+
+`npm run eval` roda um golden set de 11 perguntas (`src/eval/goldenSet.ts`) contra o
+documento indexado, em 3 categorias: hop único, multi-hop (resposta exige combinar
+fatos de chunks diferentes) e fora de escopo (deve disparar a recusa). Métricas são
+objetivas, sem LLM-judge: hit@k de retrieval, presença do fato esperado na resposta, e
+recusa correta — ver `docs/architecture.md`.
+
+Precisa de Neo4j de pé (`npm run infra:up`) e `OPENROUTER_API_KEY` configurada. Fica
+fora do `npm test` padrão — não quebra CI sem essa infra. Relatório vai pra
+`outputs/eval-report-<timestamp>.md`, um arquivo novo por run (nunca sobrescreve, pra
+dar pra comparar antes/depois de uma mudança).
+
 ## Aprendizados e limitações conhecidas
 
 - `@langchain/community` está marcado como deprecated no npm, mas ainda é a única fonte
@@ -100,7 +113,6 @@ encerra antes de chamar o LLM.
   processo de indexação do processo de consulta).
 - Sumarização automática dos chunks antes do índice.
 - Interface web simples.
-- Avaliação automática de qualidade das respostas (RAG evaluation).
 
 ## Licença
 

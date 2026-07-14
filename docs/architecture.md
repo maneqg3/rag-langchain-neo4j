@@ -44,3 +44,26 @@ chunks que sequer são parecidos com a pergunta.
 propriedades de nó primitivas ou arrays de primitivas — gravar essa metadata direto
 falha com `Neo.ClientError.Statement.TypeError`. `src/ingest.ts` achata a metadata para
 `{ source: string, pageNumber: number }` antes de chamar `Neo4jVectorStore.fromDocuments`.
+
+## Harness de avaliação (`src/eval/`, `src/evalRunner.ts`)
+
+`src/eval/goldenSet.ts` guarda 11 perguntas rotuladas (`single-hop` | `multi-hop` |
+`out-of-scope`) com os fatos que a resposta precisa conter. `src/eval/metrics.ts`
+calcula 3 métricas puras, sem LLM-judge:
+
+- `hitAtK`: todo fato esperado aparece em algum chunk do `context` retornado por
+  `AI.answerQuestion`?
+- `answerContainsFacts`: todo fato esperado aparece no texto da resposta final?
+- `isCorrectRefusal`: a resposta bate exatamente com `NO_CONTEXT_ANSWER` (exportada de
+  `src/ai/AI.ts`, não duplicada)?
+
+As três normalizam texto antes de comparar (minúsculas, sem acento, espaços colapsados)
+— o PDF real tem artefatos de extração (acento sumindo, quebra de linha no meio de um
+nome) que quebrariam comparação literal sem isso.
+
+`src/eval/report.ts` agrupa os resultados por categoria — nunca um agregado único, pra
+não esconder uma categoria fraca atrás da média das outras.
+
+`src/evalRunner.ts` é o entry point real: reaproveita `ingestDocument`, `AI` e
+`loadConfig` já existentes no pipeline principal, roda o golden set contra Neo4j+LLM de
+verdade, e grava `outputs/eval-report-<timestamp>.md`.
