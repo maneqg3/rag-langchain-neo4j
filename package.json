@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "infra:up": "docker compose --env-file .env -f infra/docker-compose.yml up -d",
     "infra:down": "docker compose -f infra/docker-compose.yml down",
-    "generate:placeholder-pdf": "node scripts/generate-placeholder-pdf.mjs"
+    "generate:placeholder-pdf": "node scripts/generate-placeholder-pdf.mjs",
+    "inspect:chunks": "node scripts/inspect-chunks.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",
