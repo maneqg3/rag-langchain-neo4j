@@ -26,3 +26,10 @@ export interface AIParams {
   topK: number;
   scoreThreshold: number;
 }
+
+export interface AnswerResult {
+  answer: string;
+  usedLLM: boolean;
+  sources: string[];
+  context: Document[];
+}

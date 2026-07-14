@@ -2,16 +2,14 @@ import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { RunnableLambda, RunnableSequence } from "@langchain/core/runnables";
 import { filterByScore } from "../retrieval/vectorSearch.js";
 import { renderTemplate } from "../prompts/renderTemplate.js";
-import type { AIParams, ChainState } from "./types.js";
+import type { AIParams, AnswerResult, ChainState } from "./types.js";
 
-const NO_CONTEXT_ANSWER = "Não tenho informação suficiente no contexto para responder essa pergunta.";
+export const NO_CONTEXT_ANSWER = "Não tenho informação suficiente no contexto para responder essa pergunta.";
 
 export class AI {
   constructor(private readonly params: AIParams) {}
 
-  async answerQuestion(
-    question: string,
-  ): Promise<{ answer: string; usedLLM: boolean; sources: string[] }> {
+  async answerQuestion(question: string): Promise<AnswerResult> {
     const chain = RunnableSequence.from([
       RunnableLambda.from((state: ChainState) => this.retrieveVectorSearch(state)),
       RunnableLambda.from((state: ChainState) => this.generateAnswer(state)),
@@ -28,6 +26,7 @@ export class AI {
       answer: finalState.answer,
       usedLLM: finalState.usedLLM,
       sources: finalState.context.map((doc) => String(doc.metadata?.source ?? "desconhecida")),
+      context: finalState.context,
     };
   }
 

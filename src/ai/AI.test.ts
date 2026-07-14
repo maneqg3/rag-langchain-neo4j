@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Document } from "@langchain/core/documents";
-import { AI } from "./AI.js";
+import { AI, NO_CONTEXT_ANSWER } from "./AI.js";
 import type { AnswerLLM, ScoredRetriever } from "./types.js";
 
 function makeDoc(content: string, source = "source.pdf"): Document {
@@ -16,8 +16,9 @@ const promptConfig = {
 
 describe("AI.answerQuestion", () => {
   it("retorna a resposta do LLM quando há contexto acima do score mínimo", async () => {
+    const contextDoc = makeDoc("RAG combina busca e geração");
     const vectorStore: ScoredRetriever = {
-      similaritySearchWithScore: vi.fn().mockResolvedValue([[makeDoc("RAG combina busca e geração"), 0.9]]),
+      similaritySearchWithScore: vi.fn().mockResolvedValue([[contextDoc, 0.9]]),
     };
     const llm: AnswerLLM = {
       invoke: vi.fn().mockResolvedValue({ content: "RAG é retrieval-augmented generation." }),
@@ -37,6 +38,7 @@ describe("AI.answerQuestion", () => {
     expect(result.answer).toBe("RAG é retrieval-augmented generation.");
     expect(result.usedLLM).toBe(true);
     expect(result.sources).toEqual(["source.pdf"]);
+    expect(result.context).toEqual([contextDoc]);
     expect(llm.invoke).toHaveBeenCalledTimes(1);
   });
 
@@ -58,7 +60,8 @@ describe("AI.answerQuestion", () => {
     const result = await ai.answerQuestion("Pergunta fora do contexto?");
 
     expect(result.usedLLM).toBe(false);
-    expect(result.answer).toMatch(/não tenho informação suficiente/i);
+    expect(result.answer).toBe(NO_CONTEXT_ANSWER);
+    expect(result.context).toEqual([]);
     expect(llm.invoke).not.toHaveBeenCalled();
   });
 
