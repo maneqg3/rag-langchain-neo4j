@@ -123,6 +123,19 @@ dar pra comparar antes/depois de uma mudança).
   conteúdo relevante. `multi-4` foi limitação da própria métrica: a resposta usou "cinco
   títulos" em vez do texto-fonte literal "cinco no total" — `answerContainsFacts` é
   substring exata, sem LLM-judge, então não reconhece paráfrase.
+- O harness agora sinaliza os dois modos de falha acima automaticamente:
+  `groundingViolation` (resposta certa sem o chunk certo — o achado de `multi-2` acima) e
+  `synthesisFailure` (chunks certos recuperados, resposta não combina os fatos — só se
+  aplica a `multi-hop`), ambos derivados de `hitAtK`/`answerCorrect` em
+  `src/eval/metrics.ts` e marcados no relatório (`[FAIL ⚠️ GROUNDING]` /
+  `[FAIL ⚠️ SYNTHESIS]`). Rodando `npm run eval` de novo agora (duas vezes seguidas,
+  resultado idêntico — pipeline determinístico com `temperature: 0.2`), o achado de
+  `multi-2` não reproduziu: dessa vez foi miss de retrieval genuíno
+  (`hitAtK=false`, `answerCorrect=false`), não alucinação — o modelo gratuito roteado
+  pelo OpenRouter mudou desde o smoke test original (ver nota acima sobre
+  instabilidade de providers). Em compensação, o sinal novo capturou dois casos reais de
+  falha de síntese (`multi-1`, `multi-4`) que antes apareciam como `[FAIL]` genérico,
+  indistinguíveis de um miss de retrieval comum.
 
 ## Próximos passos / melhorias planejadas
 
