@@ -9,6 +9,8 @@ export interface EvalItemResult {
   hitAtK: boolean | null;
   answerCorrect: boolean | null;
   refusalCorrect: boolean | null;
+  groundingViolation: boolean | null;
+  synthesisFailure: boolean | null;
   answer: string;
 }
 
@@ -35,6 +37,24 @@ export function isCorrectRefusal(answer: string, refusalMessage: string): boolea
   return normalize(answer) === normalize(refusalMessage);
 }
 
+export function isGroundingViolation(hit: boolean | null, answerCorrect: boolean | null): boolean | null {
+  if (hit === null || answerCorrect === null) {
+    return null;
+  }
+  return hit === false && answerCorrect === true;
+}
+
+export function isSynthesisFailure(
+  category: HopCategory,
+  hit: boolean | null,
+  answerCorrect: boolean | null,
+): boolean | null {
+  if (category !== "multi-hop" || hit === null || answerCorrect === null) {
+    return null;
+  }
+  return hit === true && answerCorrect === false;
+}
+
 export function evaluateItem(
   item: GoldenSetItem,
   retrievedDocs: Document[],
@@ -51,6 +71,8 @@ export function evaluateItem(
       hitAtK: null,
       answerCorrect: null,
       refusalCorrect,
+      groundingViolation: null,
+      synthesisFailure: null,
       answer,
     };
   }
@@ -65,6 +87,8 @@ export function evaluateItem(
     hitAtK: hit,
     answerCorrect,
     refusalCorrect: null,
+    groundingViolation: isGroundingViolation(hit, answerCorrect),
+    synthesisFailure: isSynthesisFailure(item.category, hit, answerCorrect),
     answer,
   };
 }

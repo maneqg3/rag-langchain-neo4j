@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { Document } from "@langchain/core/documents";
-import { answerContainsFacts, evaluateItem, hitAtK, isCorrectRefusal } from "./metrics.js";
+import {
+  answerContainsFacts,
+  evaluateItem,
+  hitAtK,
+  isCorrectRefusal,
+  isGroundingViolation,
+  isSynthesisFailure,
+} from "./metrics.js";
 import type { GoldenSetItem } from "./goldenSet.js";
 
 function makeDoc(content: string): Document {
@@ -60,6 +67,42 @@ describe("isCorrectRefusal", () => {
   });
 });
 
+describe("isGroundingViolation", () => {
+  it("retorna true quando não houve hit mas a resposta acertou os fatos", () => {
+    expect(isGroundingViolation(false, true)).toBe(true);
+  });
+
+  it("retorna false quando houve hit e a resposta acertou (sem violação)", () => {
+    expect(isGroundingViolation(true, true)).toBe(false);
+  });
+
+  it("retorna false quando não houve hit nem acerto (miss genuíno, não é violação)", () => {
+    expect(isGroundingViolation(false, false)).toBe(false);
+  });
+
+  it("retorna null quando hit ou answerCorrect são null (fora de escopo)", () => {
+    expect(isGroundingViolation(null, null)).toBeNull();
+  });
+});
+
+describe("isSynthesisFailure", () => {
+  it("retorna true em multi-hop quando houve hit mas a resposta não acertou", () => {
+    expect(isSynthesisFailure("multi-hop", true, false)).toBe(true);
+  });
+
+  it("retorna false em multi-hop quando houve hit e a resposta acertou", () => {
+    expect(isSynthesisFailure("multi-hop", true, true)).toBe(false);
+  });
+
+  it("retorna null em single-hop mesmo com hit true e answerCorrect false", () => {
+    expect(isSynthesisFailure("single-hop", true, false)).toBeNull();
+  });
+
+  it("retorna null em out-of-scope", () => {
+    expect(isSynthesisFailure("out-of-scope", null, null)).toBeNull();
+  });
+});
+
 describe("evaluateItem", () => {
   it("passa item hop único quando hit@k e resposta batem com os fatos esperados", () => {
     const item: GoldenSetItem = {
@@ -76,9 +119,11 @@ describe("evaluateItem", () => {
     expect(result.hitAtK).toBe(true);
     expect(result.answerCorrect).toBe(true);
     expect(result.refusalCorrect).toBeNull();
+    expect(result.groundingViolation).toBe(false);
+    expect(result.synthesisFailure).toBeNull();
   });
 
-  it("reprova item multi-hop quando falta um dos fatos na resposta", () => {
+  it("reprova item multi-hop quando falta um dos fatos na resposta (falha de síntese)", () => {
     const item: GoldenSetItem = {
       id: "multi-1",
       category: "multi-hop",
@@ -92,9 +137,11 @@ describe("evaluateItem", () => {
     expect(result.passed).toBe(false);
     expect(result.hitAtK).toBe(true);
     expect(result.answerCorrect).toBe(false);
+    expect(result.groundingViolation).toBe(false);
+    expect(result.synthesisFailure).toBe(true);
   });
 
-  it("avalia item fora de escopo só pela recusa, ignorando hit@k/answerCorrect", () => {
+  it("avalia item fora de escopo só pela recusa, ignorando hit@k/answerCorrect/grounding/síntese", () => {
     const item: GoldenSetItem = {
       id: "oos-1",
       category: "out-of-scope",
@@ -108,5 +155,29 @@ describe("evaluateItem", () => {
     expect(result.refusalCorrect).toBe(true);
     expect(result.hitAtK).toBeNull();
     expect(result.answerCorrect).toBeNull();
+    expect(result.groundingViolation).toBeNull();
+    expect(result.synthesisFailure).toBeNull();
+  });
+
+  it("marca violação de grounding quando a resposta acerta um fato fora dos chunks recuperados", () => {
+    const item: GoldenSetItem = {
+      id: "multi-2",
+      category: "multi-hop",
+      question: "Compare o placar de 2026 com o de 2014.",
+      expectedFacts: ["2 a 1", "7 a 1"],
+    };
+    // só o chunk de 2026 foi recuperado — "7 a 1" (semifinal de 2014) não está aqui
+    const docs = [makeDoc("Em 2026 o Brasil perdeu por 2 a 1 para a Noruega.")];
+
+    const result = evaluateItem(item, docs, "O placar de 2026 foi 2 a 1, e o de 2014 foi 7 a 1.", REFUSAL);
+
+    expect(result.hitAtK).toBe(false);
+    expect(result.answerCorrect).toBe(true);
+    expect(result.passed).toBe(false);
+    expect(result.groundingViolation).toBe(true);
+    // hitAtK é false aqui, então a fórmula de synthesisFailure (hitAtK === true && ...)
+    // não é satisfeita — miss de retrieval e falha de síntese são sinais mutuamente
+    // exclusivos por construção, isso não é um caso dos dois ao mesmo tempo.
+    expect(result.synthesisFailure).toBe(false);
   });
 });
