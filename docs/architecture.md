@@ -61,8 +61,21 @@ As três normalizam texto antes de comparar (minúsculas, sem acento, espaços c
 — o PDF real tem artefatos de extração (acento sumindo, quebra de linha no meio de um
 nome) que quebrariam comparação literal sem isso.
 
+Dois campos derivados diagnosticam *por que* um item falhou, sem mudar `passed`:
+
+- `groundingViolation` (`isGroundingViolation`): `hitAtK === false && answerCorrect ===
+  true` — resposta certa sem o chunk certo ter sido recuperado, indício de que o LLM
+  usou conhecimento próprio em vez do contexto. Aplica-se a `single-hop` e `multi-hop`;
+  `null` em `out-of-scope`.
+- `synthesisFailure` (`isSynthesisFailure`): `hitAtK === true && answerCorrect ===
+  false`, só em `multi-hop` — chunks certos recuperados, resposta não combinou os
+  fatos. `null` em `single-hop` e `out-of-scope` (não há o que "sintetizar" com um
+  chunk só).
+
 `src/eval/report.ts` agrupa os resultados por categoria — nunca um agregado único, pra
-não esconder uma categoria fraca atrás da média das outras.
+não esconder uma categoria fraca atrás da média das outras. Cada item reprovado ganha
+marcador (`[FAIL ⚠️ GROUNDING]` / `[FAIL ⚠️ SYNTHESIS]` / `[FAIL]` genérico), e o topo
+do relatório soma as duas contagens por categoria.
 
 `src/evalRunner.ts` é o entry point real: reaproveita `ingestDocument`, `AI` e
 `loadConfig` já existentes no pipeline principal, roda o golden set contra Neo4j+LLM de
