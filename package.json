@@ -6,6 +6,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "tsx src/index.ts",
+    "eval": "tsx src/evalRunner.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "test": "vitest run",
