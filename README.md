@@ -106,6 +106,23 @@ dar pra comparar antes/depois de uma mudança).
   `meta-llama/llama-3.2-3b-instruct:free` via provider "Venice" ficou rate-limited por
   vários minutos seguidos). O default do projeto é `openai/gpt-oss-20b:free`, mas vale
   conferir a lista atual em https://openrouter.ai/models?q=free se a resposta não vier.
+- Primeiro smoke test do harness de avaliação (`npm run eval`) contra Neo4j real: 6/11
+  passaram (hop único 2/4, multi-hop 2/4, fora de escopo 0/3). As 3 recusas fora de
+  escopo falharam porque `scoreThreshold: 0.5` quase nunca esvazia o contexto num corpus
+  pequeno (12 chunks) — o LLM decide sozinho recusar, com texto livre em vez da mensagem
+  fixa `NO_CONTEXT_ANSWER`. Ele não inventou resposta em nenhum dos 3 casos (não
+  alucinou), só não usou o caminho determinístico — o filtro de score, hoje, não é
+  suficiente sozinho pra bloquear o LLM nesses casos.
+- Achado mais sério: em `multi-2` ("compare o placar de 2026 com o de 2014"), o LLM
+  respondeu "7 a 1" corretamente, mas o chunk com esse fato (semifinal de 2014 x
+  Alemanha) não estava entre os 4 chunks recuperados — o modelo puxou conhecimento
+  próprio sobre um evento histórico real e famoso, não o contexto fornecido. Viola a
+  regra "usar somente o contexto" (`docs/prompts-strategy.md`) mesmo respondendo certo.
+  `single-3` e `single-4` tiveram miss de retrieval genuíno: o chunk relevante não entrou
+  no top-K, e ruído de rodapé de página ("Inglaterra segura pressão...") competiu com
+  conteúdo relevante. `multi-4` foi limitação da própria métrica: a resposta usou "cinco
+  títulos" em vez do texto-fonte literal "cinco no total" — `answerContainsFacts` é
+  substring exata, sem LLM-judge, então não reconhece paráfrase.
 
 ## Próximos passos / melhorias planejadas
 
